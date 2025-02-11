@@ -1,49 +1,8 @@
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-.pnpm-debug.log*
-lerna-debug.log*
-
-# Diagnostic reports
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-# Runtime data
-pids/
-*.pid
-*.seed
-*.pid.lock
-
 # Dependency directories
 node_modules/
-jspm_packages/
-bower_components/
-.yarn/cache/
-.yarn/unplugged/
-.yarn/build-state.yml
-.yarn/install-state.gz
-.pnp.*
-
-# Build output
-build/
-dist/
-out/
-.next/
-.nuxt/
-.docusaurus/
-.vuepress/dist
-.temp/
 
 # TypeScript cache
 *.tsbuildinfo
-
-# Coverage & test outputs
-coverage/
-*.lcov
-.nyc_output/
-.vscode-test/
-
 
 # Environment variable files
 .env
@@ -55,9 +14,6 @@ coverage/
 .idea/
 .DS_Store
 .tern-port
-
-# REPL history
-.node_repl_history
 
 # Build output (compiled TypeScript)
 dist/
