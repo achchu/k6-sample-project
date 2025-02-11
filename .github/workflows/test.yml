@@ -1,0 +1,40 @@
+name: Run Tests (Jest & k6)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Typescript & k6 types
+        run: npm install --save-dev typescript @types/k6
+
+      - name: Compile Typescript (k6 Test)
+        run: npx tsc performance/k6-test.ts --outDir dist
+
+      - name: Run Jest tests
+        run: npm test
+
+      - name: Install k6
+        run: sudo apt-get install -y k6
+
+      - name: Run k6 tests
+        run: k6 run dist/k6-test.js
+        env:
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          ALPHA_VANTAGE_API_URL: ${{ secrets.ALPHA_VANTAGE_API_URL }}
