@@ -29,6 +29,9 @@ jobs:
 
       - name: Run Jest tests
         run: npm test
+        env:
+          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
+          ALPHA_VANTAGE_API_URL: ${{ secrets.ALPHA_VANTAGE_API_URL }}
 
       - name: Install k6
         run: sudo apt-get install -y k6
