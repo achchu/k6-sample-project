@@ -44,22 +44,8 @@ coverage/
 .nyc_output/
 .vscode-test/
 
-# Tool-specific caches
-.eslintcache
-.stylelintcache
-.parcel-cache/
-.cache/
-.rpt2_cache/
-.rts2_cache_cjs/
-.rts2_cache_es/
-.rts2_cache_umd/
-.fusebox/
 
-# Serverless files
-.serverless/
-.dynamodb/
-
-# Environment variable files (Security best practice)
+# Environment variable files
 .env
 .env.*
 .env.local
@@ -72,3 +58,9 @@ coverage/
 
 # REPL history
 .node_repl_history
+
+# Build output (compiled TypeScript)
+dist/
+
+# Test coverage reports
+coverage/
