@@ -34,7 +34,14 @@ jobs:
           ALPHA_VANTAGE_API_URL: ${{ secrets.ALPHA_VANTAGE_API_URL }}
 
       - name: Install k6
-        run: sudo apt-get install -y k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates gnupg
+          sudo mkdir -p --mode=0755 /etc/apt/keyrings
+          curl -fsSL https://dl.k6.io/key.gpg | sudo tee /etc/apt/keyrings/k6.asc >/dev/null
+          echo "deb [signed-by=/etc/apt/keyrings/k6.asc] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
 
       - name: Run k6 tests
         run: k6 run dist/k6-test.js
