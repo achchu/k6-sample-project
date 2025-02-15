@@ -27,8 +27,12 @@ jobs:
       - name: Compile Typescript (k6 Test)
         run: npx tsc performance/k6-test.ts --outDir dist
 
-      - name: Run Jest tests
-        run: npm test
+      - name: Run Unit tests
+        run: npm run test:unit
+
+      - name: Run Integration tests (Only on PRs to avoid rate limiting)
+        if: github.event_name == 'pull_request'
+        run: npm run test:integration
         env:
           ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
           ALPHA_VANTAGE_API_URL: ${{ secrets.ALPHA_VANTAGE_API_URL }}

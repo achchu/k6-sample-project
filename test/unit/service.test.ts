@@ -1,6 +1,9 @@
 import axios from "axios";
 import { getStockData, getIntradayData } from "../../src/service";
 
+process.env.ALPHA_VANTAGE_API_KEY = "test-key";
+process.env.ALPHA_VANTAGE_API_URL = "https://test-url.com";
+
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
@@ -9,6 +12,8 @@ describe("Service environment variables validation", () => {
 
   beforeEach(() => {
     originalEnv = { ...process.env };
+    process.env.ALPHA_VANTAGE_API_KEY = "test-key";
+    process.env.ALPHA_VANTAGE_API_URL = "https://test-url.com";
   });
 
   afterEach(() => {
@@ -18,7 +23,7 @@ describe("Service environment variables validation", () => {
 
   it("should throw an error if API_KEY is missing", () => {
     process.env.ALPHA_VANTAGE_API_KEY = "";
-    process.env.ALPHA_VANTAGE_API_URL = "https://www.alphavantage.co/query";
+    process.env.ALPHA_VANTAGE_API_URL = "https://test-url.com";
 
     expect(() => {
       jest.resetModules();
@@ -119,7 +124,7 @@ describe("Stock API Service", () => {
       });
     });
 
-    it("should handle invalid API ket error", async () => {
+    it("should handle invalid API key error", async () => {
       mockedAxios.get.mockRejectedValue({
         response: { status: 403, data: "Invalid API key" },
       });
