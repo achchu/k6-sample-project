@@ -1,6 +1,9 @@
 import axios from "axios";
 import { getStockData, getIntradayData } from "../../src/service";
 
+process.env.ALPHA_VANTAGE_API_KEY = "test-key";
+process.env.ALPHA_VANTAGE_API_URL = "https://test-url.com";
+
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
 
