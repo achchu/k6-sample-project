@@ -124,7 +124,7 @@ describe("Stock API Service", () => {
       });
     });
 
-    it("should handle invalid API ket error", async () => {
+    it("should handle invalid API key error", async () => {
       mockedAxios.get.mockRejectedValue({
         response: { status: 403, data: "Invalid API key" },
       });
