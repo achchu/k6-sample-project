@@ -1,12 +1,3 @@
-jest.mock("dotenv", () => ({
-  config: () => ({
-    parsed: {
-      ALPHA_VANTAGE_API_KEY: "test-key",
-      ALPHA_VANTAGE_API_URL: "https://test-url.com",
-    },
-  }),
-}));
-
 import axios from "axios";
 import { getStockData, getIntradayData } from "../../src/service";
 
