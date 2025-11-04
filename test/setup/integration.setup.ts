@@ -1,12 +1,5 @@
 // Setup for integration tests
-if (!process.env.ALPHA_VANTAGE_API_KEY) {
-  throw new Error(
-    "Integration tests require ALPHA_VANTAGE_API_KEY environment variable"
-  );
-}
-
-if (!process.env.ALPHA_VANTAGE_API_URL) {
-  throw new Error(
-    "Integration tests require ALPHA_VANTAGE_API_URL environment variable"
-  );
-}
+process.env.MARKET_API_BASE_URL =
+  process.env.MARKET_API_BASE_URL ?? "http://localhost:4000/api/v1";
+process.env.MARKET_API_TIMEOUT_MS =
+  process.env.MARKET_API_TIMEOUT_MS ?? "5000";

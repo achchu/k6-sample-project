@@ -149,11 +149,16 @@ const createApp = () => {
   return app;
 };
 
-export const startServer = (port: number = DEFAULT_PORT) => {
+export const startServer = (
+  port: number = DEFAULT_PORT,
+  host: string = "0.0.0.0"
+) => {
   const app = createApp();
-  const server = app.listen(port, () => {
+  const server = app.listen(port, host, () => {
     console.log(
-      `Market data API listening on port ${port} (NODE_ENV=${process.env.NODE_ENV ?? "development"})`
+      `Market data API listening on ${host}:${port} (NODE_ENV=${
+        process.env.NODE_ENV ?? "development"
+      })`
     );
   });
   return server;
