@@ -3,67 +3,66 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const API_KEY = process.env.ALPHA_VANTAGE_API_KEY;
-const API_URL = process.env.ALPHA_VANTAGE_API_URL;
+const BASE_URL =
+  process.env.MARKET_API_BASE_URL ?? "http://localhost:4000/api/v1";
+const DEFAULT_TIMEOUT_MS = Number(process.env.MARKET_API_TIMEOUT_MS ?? 5000);
 
-if (!API_KEY) {
+if (!BASE_URL) {
   throw new Error(
-    "Missing API_KEY: Ensure ALPHA_VANTAGE_API_KEY is set in environment variables."
+    "Missing MARKET_API_BASE_URL: point it to the local market data API."
   );
 }
 
-if (!API_URL) {
-  throw new Error(
-    "Missing API_URL: Ensure ALPHA_VANTAGE_API_URL is set in environment variables."
-  );
-}
+const client = axios.create({
+  baseURL: BASE_URL,
+  timeout: DEFAULT_TIMEOUT_MS,
+});
 
-export const getStockData = async (symbol: string) => {
+const logError = (prefix: string, error: unknown) => {
+  if (axios.isAxiosError(error)) {
+    console.error(`${prefix}:`, error.response?.data ?? error.message);
+  } else {
+    console.error(`${prefix}:`, error);
+  }
+};
+
+export const getDailyStockData = async (symbol: string, limit?: number) => {
   try {
-    const response = await axios.get(API_URL, {
-      params: {
-        function: "TIME_SERIES_DAILY",
-        symbol,
-        apikey: API_KEY,
-      },
-    });
+    const params = typeof limit === "number" ? { limit } : {};
+    const response = await client.get(`/stocks/${symbol}/daily`, { params });
     return response.data;
-  } catch (error: any) {
-    if (error?.isAxiosError) {
-      console.error(
-        "API Error fetching stock data:",
-        error.response?.data || error.message
-      );
-    } else {
-      console.error("Unexpected error fetching stock data:", error);
-    }
+  } catch (error) {
+    logError("API error fetching daily stock data", error);
     throw error;
   }
 };
 
 export const getIntradayData = async (
   symbol: string,
-  interval: string = "5min"
+  interval: string = "5min",
+  limit?: number
 ) => {
   try {
-    const response = await axios.get(API_URL, {
-      params: {
-        function: "TIME_SERIES_INTRADAY",
-        symbol,
-        interval,
-        apikey: API_KEY,
-      },
+    const params = {
+      interval,
+      ...(typeof limit === "number" ? { limit } : {}),
+    };
+    const response = await client.get(`/stocks/${symbol}/intraday`, {
+      params,
     });
     return response.data;
-  } catch (error: any) {
-    if (error?.isAxiosError) {
-      console.error(
-        "API Error fetching intraday data:",
-        error.response?.data || error.message
-      );
-    } else {
-      console.error("Unexpected error fetching intraday data:", error);
-    }
+  } catch (error) {
+    logError("API error fetching intraday data", error);
+    throw error;
+  }
+};
+
+export const listTrackedStocks = async () => {
+  try {
+    const response = await client.get("/stocks");
+    return response.data;
+  } catch (error) {
+    logError("API error listing tracked stocks", error);
     throw error;
   }
 };

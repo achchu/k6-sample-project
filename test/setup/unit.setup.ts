@@ -1,3 +1,3 @@
 // Setup for unit tests with mock values
-process.env.ALPHA_VANTAGE_API_KEY = "test-key";
-process.env.ALPHA_VANTAGE_API_URL = "https://test-url.com";
+process.env.MARKET_API_BASE_URL = "http://localhost:4000/api/v1";
+process.env.MARKET_API_TIMEOUT_MS = "5000";

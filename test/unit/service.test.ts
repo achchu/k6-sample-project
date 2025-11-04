@@ -1,19 +1,26 @@
 import axios from "axios";
-import { getStockData, getIntradayData } from "../../src/service";
-
-process.env.ALPHA_VANTAGE_API_KEY = "test-key";
-process.env.ALPHA_VANTAGE_API_URL = "https://test-url.com";
 
 jest.mock("axios");
 const mockedAxios = axios as jest.Mocked<typeof axios>;
+
+const mockClient = {
+  get: jest.fn(),
+}
+
+mockedAxios.create.mockReturnValue(mockClient as any);
+mockedAxios.isAxiosError.mockImplementation(
+  (error: any) => Boolean(error?.isAxiosError)
+);
+
+import { getDailyStockData, getIntradayData, listTrackedStocks } from "../../src/service";
+
 
 describe("Service environment variables validation", () => {
   let originalEnv: NodeJS.ProcessEnv;
 
   beforeEach(() => {
     originalEnv = { ...process.env };
-    process.env.ALPHA_VANTAGE_API_KEY = "test-key";
-    process.env.ALPHA_VANTAGE_API_URL = "https://test-url.com";
+    process.env.MARKET_API_BASE_URL = "http://localhost:4000/api/v1";
   });
 
   afterEach(() => {
@@ -22,181 +29,162 @@ describe("Service environment variables validation", () => {
   });
 
   it("should throw an error if API_KEY is missing", () => {
-    process.env.ALPHA_VANTAGE_API_KEY = "";
-    process.env.ALPHA_VANTAGE_API_URL = "https://test-url.com";
+    process.env.MARKET_API_BASE_URL = "";
 
     expect(() => {
       jest.resetModules();
       require("../../src/service");
     }).toThrow(
-      "Missing API_KEY: Ensure ALPHA_VANTAGE_API_KEY is set in environment variables."
-    );
-  });
-
-  it("should throw an error if API_URL is missing", () => {
-    process.env.ALPHA_VANTAGE_API_KEY = "test-key";
-    process.env.ALPHA_VANTAGE_API_URL = "";
-
-    expect(() => {
-      jest.resetModules();
-      require("../../src/service");
-    }).toThrow(
-      "Missing API_URL: Ensure ALPHA_VANTAGE_API_URL is set in environment variables."
+      "Missing MARKET_API_BASE_URL: point it to the local market data API"
     );
   });
 });
 
 describe("Stock API Service", () => {
   beforeAll(() => {
-    // Silence console.error during tests
     jest.spyOn(console, "error").mockImplementation(() => {});
   });
 
   afterAll(() => {
-    // Restore console.error after tests
     jest.restoreAllMocks();
   });
 
-  const mockSuccessResponse = {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockClient.get.mockReset();
+  })
+
+  const mockDailyResponse = {
     data: {
       "Time Series (Daily)": {
-        "2024-01-01": {
-          "1. open": "150.00",
-          "2. high": "155.00",
-          "3. low": "145.00",
-          "4. close": "152.00",
+        "2025-01-10": {
+          "1. open": "189.45",
+          "2. high": "191.22",
+          "3. low": "188.90",
+          "4. close": "190.75",
+          "5. volume": "98852000",
         },
       },
     },
-    status: 200,
-    statusText: "OK",
-    headers: {},
-    config: {
-      url: "https://www.alphavantage.co/query",
-      method: "get",
-      headers: { "Content-Type": "application/json" },
-    },
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  describe("getStockData", () => {
-    it("should fetch stock data successfully", async () => {
-      mockedAxios.get.mockResolvedValue(mockSuccessResponse);
-      const result = await getStockData("AAPL");
-      expect(result).toEqual(mockSuccessResponse.data);
+  describe("getDailyStockData", () => {
+    it("returns daily data when the API call is successful", async () => {
+      mockClient.get.mockResolvedValue(mockDailyResponse);
+      const result = await getDailyStockData("AAPL");
+      expect(mockClient.get).toHaveBeenCalledWith("/stocks/AAPL/daily" , {
+        params: {},
+      });
+      expect(result).toEqual(mockDailyResponse.data);
     });
 
-    it("should handle API errors", async () => {
-      const errorResponse = {
-        response: {
-          data: "API Error",
-          status: 400,
-        },
+    it("passes optional limit parameter", async () => {
+      mockClient.get.mockResolvedValue(mockDailyResponse);
+      await getDailyStockData("AAPL", 3);
+      expect(mockClient.get).toHaveBeenCalledWith("/stocks/AAPL/daily", {
+        params: { limit: 3 },
+      });
+    });
+
+    it("rethrows API errors", async () => {
+      const apiError = Object.assign(new Error("Request failed"), {
         isAxiosError: true,
-        message: "Request failed",
-      };
-      mockedAxios.get.mockRejectedValue(errorResponse);
+        response: { status: 500, data: "error" },
+      });
+      mockClient.get.mockRejectedValue(apiError);
 
-      await expect(getStockData("INVALID")).rejects.toEqual(errorResponse);
+      await expect(getDailyStockData("AAPL")).rejects.toBe(apiError);
     });
 
-    it("should handle unexpected errors", async () => {
-      const unexpectedError = new Error("Network error");
-      mockedAxios.get.mockRejectedValueOnce(unexpectedError);
+    it("logs unexpected errors", async () => {
+      const unexpected = new Error("Boom");
+      mockClient.get.mockRejectedValue(unexpected);
 
       const consoleSpy = jest.spyOn(console, "error");
-      await expect(getStockData("AAPL")).rejects.toThrow("Network error");
-
+      await expect(getDailyStockData("AAPL")).rejects.toThrow("Boom");
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Unexpected error fetching stock data:",
-        unexpectedError
+        "API error fetching daily stock data:",
+        unexpected
       );
-    });
-
-    it("should handle API timeouts", async () => {
-      mockedAxios.get.mockRejectedValue({ code: "ECONNABORTED" });
-
-      await expect(getStockData("AAPL")).rejects.toMatchObject({
-        code: `ECONNABORTED`,
-      });
-    });
-
-    it("should handle invalid API key error", async () => {
-      mockedAxios.get.mockRejectedValue({
-        response: { status: 403, data: "Invalid API key" },
-      });
-
-      await expect(getStockData("AAPL")).rejects.toMatchObject({
-        response: { status: 403 },
-      });
     });
   });
 
   describe("getIntradayData", () => {
-    it("should fetch intraday data successfully", async () => {
-      const intradayResponse = {
-        data: {
-          "Time Series (5min)": {
-            "2024-01-01 09:35:00": {
-              "1. open": "150.00",
-              "2. high": "155.00",
-              "3. low": "145.00",
-              "4. close": "152.00",
-            },
+    const mockIntradayResponse = {
+      data: {
+        "Time Series (5min)": {
+          "2025-01-10 09:30:00": {
+            "1. open": "189.45",
+            "2. high": "189.72",
+            "3. low": "189.30",
+            "4. close": "189.60",
+            "5. volume": "612000",
           },
         },
-        status: 200,
-        statusText: "OK",
-        headers: {},
-        config: {
-          url: "https://www.alphavantage.co/query",
-          method: "get",
-        },
-      };
+      },
+    };
 
-      mockedAxios.get.mockResolvedValue(intradayResponse);
+    it("fetches intraday data with default interval", async () => {
+      mockClient.get.mockResolvedValue(mockIntradayResponse);
       const result = await getIntradayData("AAPL");
-      expect(result).toEqual(intradayResponse.data);
+
+      expect(mockClient.get).toHaveBeenCalledWith("/stocks/AAPL/intraday", {
+        params: { interval: "5min" },
+      });
+      expect(result).toEqual(mockIntradayResponse.data);
     });
 
-    it("should handle API errors for intraday data", async () => {
-      const errorResponse = {
-        response: {
-          data: "API Error",
-          status: 500,
-        },
-        isAxiosError: true,
-        message: "Server error",
-      };
-      mockedAxios.get.mockRejectedValue(errorResponse);
+    it("allows overriding interval and limit", async () => {
+      mockClient.get.mockResolvedValue(mockIntradayResponse);
+      await getIntradayData("AAPL", "1min", 10);
 
-      await expect(getIntradayData("INVALID")).rejects.toEqual(errorResponse);
-    });
-
-    it("should use default interval of 5min", async () => {
-      mockedAxios.get.mockResolvedValue(mockSuccessResponse);
-      await getIntradayData("AAPL");
-      expect(mockedAxios.get).toHaveBeenCalledWith(expect.any(String), {
-        params: expect.objectContaining({
-          interval: "5min",
-        }),
+      expect(mockClient.get).toHaveBeenCalledWith("/stocks/AAPL/intraday", {
+        params: { interval: "1min", limit: 10 },
       });
     });
 
-    it("should handle unexpected errors for intraday data", async () => {
-      const unexpectedError = new Error("Network error");
-      mockedAxios.get.mockRejectedValueOnce(unexpectedError);
+    it("rethrows API errors", async () => {
+      const apiError = Object.assign(new Error("Timeout"), {
+        isAxiosError: true,
+        response: { status: 504, data: "Gateway Timeout" },
+      });
+      mockClient.get.mockRejectedValue(apiError);
+
+      await expect(getIntradayData("AAPL")).rejects.toBe(apiError);
+    });
+
+    it("logs unexpected errors", async () => {
+      const unexpected = new Error("Connection lost");
+      mockClient.get.mockRejectedValue(unexpected);
 
       const consoleSpy = jest.spyOn(console, "error");
-      await expect(getIntradayData("AAPL")).rejects.toThrow("Network error");
-
+      await expect(getIntradayData("AAPL")).rejects.toThrow("Connection lost");
       expect(consoleSpy).toHaveBeenCalledWith(
-        "Unexpected error fetching intraday data:",
-        unexpectedError
+        "API error fetching intraday data:",
+        unexpected
       );
+    });
+  });
+
+  describe("listTrackedStocks", () => {
+    it("returns the tracked stocks list", async () => {
+      const response = {
+        data: { data: [{ symbol: "AAPL" }, { symbol: "MSFT" }] },
+      };
+      mockClient.get.mockResolvedValue(response);
+
+      const result = await listTrackedStocks();
+      expect(mockClient.get).toHaveBeenCalledWith("/stocks");
+      expect(result).toEqual(response.data);
+    });
+
+    it("surface API errors when the list call fails", async () => {
+      const apiError = Object.assign(new Error("Server down"), {
+        isAxiosError: true,
+      });
+      mockClient.get.mockRejectedValue(apiError);
+
+      await expect(listTrackedStocks()).rejects.toBe(apiError);
     });
   });
 });
