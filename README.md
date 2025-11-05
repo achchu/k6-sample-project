@@ -4,7 +4,8 @@
 
 This project demonstrates API testing using:
 
-- **Jest** for unit testing
+- **Express** for local market data API server
+- **Jest** for unit and integration testing
 - **k6** for performance testing
 - **GitHub Actions** for CI/CD automation
 
@@ -31,56 +32,91 @@ cd k6-sample-project
 npm install
 ```
 
-### Set Up Environment Variables
+### Set Up Environment Variables (Optional)
 
-Create a `.env` file in the root directory:
-
-```sh
-ALPHA_VANTAGE_API_KEY=your_api_key
-ALPHA_VANTAGE_API_URL=https://www.alphavantage.co/query
-```
-
-You can obtain your API key here - https://www.alphavantage.co/support/#api-key
-
-### Manually export the .env variables
-
-Since k6 doesn't support .env files, you'll need to manually export the environment variables. So run the following commands in terminal
+The project uses a local Express API server by default. If you need to customize the API URL, create a `.env` file:
 
 ```sh
-export ALPHA_VANTAGE_API_KEY=your_api_key
-export ALPHA_VANTAGE_API_URL=https://www.alphavantage.co/query
+MARKET_API_BASE_URL=http://localhost:4000/api/v1
+MARKET_API_PORT=4000
+MARKET_API_TIMEOUT_MS=5000
 ```
+
+### Start the Local API Server
+
+Before running k6 tests, start the local market data API server:
+
+```sh
+npm run dev:api
+```
+
+The API will be available at `http://localhost:4000/api/v1` by default.
+
+### API Endpoints
+
+The local API provides the following endpoints:
+
+- `GET /api/v1/health` - Health check endpoint
+- `GET /api/v1/stocks` - List all tracked stocks
+- `GET /api/v1/stocks/:symbol` - Get symbol information
+- `GET /api/v1/stocks/:symbol/daily` - Get daily stock data (optional `?limit=N` query param)
+- `GET /api/v1/stocks/:symbol/intraday` - Get intraday data (requires `?interval=5min` query param, optional `?limit=N`)
+
+### Environment Variables for k6
+
+Since k6 doesn't support .env files, you can optionally export environment variables:
+
+```sh
+export MARKET_API_BASE_URL=http://localhost:4000/api/v1
+export SYMBOL=AAPL
+```
+
+If not set, k6 tests will default to `http://localhost:4000/api/v1` and use `AAPL` as the test symbol.
 
 ---
 
-## 2. Running Jest Unit Tests
+## 2. Running Tests
 
-### Run Unit Tests
+### Run All Tests
 
 ```sh
 npm test
 ```
-
 ---
 
 ## 3. Running k6 Performance Tests
 
-Since k6 does not support TypeScript natively, you need to **compile the test scripts first**. I am using the stable way of running .ts tests with k6 using
-the compatibility mode
+Before running k6 tests, make sure the local API server is running:
+
+```sh
+npm run dev:api
+```
+
+In a separate terminal:
 
 ### Compile TypeScript to Javascript
+
+Since k6 does not support TypeScript natively, compile the test scripts first:
 
 ```sh
 npx tsc
 ```
 
-### Run k6 Performance Tests
+### Run Basic k6 Performance Test
 
 ```sh
-k6 run dist/k6-test.js
+k6 run dist/performance/k6-test.js
 ```
 
-This test simulates a limited number of API requests to avoid exceeding free-tier API limits on Alpha.
+This test simulates 1 virtual user making 5 API requests to the local market data API.
+
+### Run k6 Load Test
+
+```sh
+k6 run dist/performance/k6-load-test.js
+```
+
+This load test ramps up from 0 to 50 users over 30 seconds, maintains 100 users for 1 minute, then ramps down to 0 over 30 seconds. It tests multiple stock symbols and endpoints.
 
 ---
 
@@ -88,41 +124,34 @@ This test simulates a limited number of API requests to avoid exceeding free-tie
 
 GitHub Actions workflow:
 
-- Runs **Jest tests** to validate API functionality.
+- Runs **Jest unit and integration tests** to validate API functionality.
 - Compiles **TypeScript** to JavaScript.
-- Runs **k6 performance tests**.
+- Starts the local API server.
+- Runs **k6 performance tests** against the local API.
 
 ### Workflow File:
 
 `.github/workflows/test.yml`
 Each push triggers these automated tests.
 
-View results in [GitHub Actions](https://github.com/achchu/k6-sample-project/actions).
+View results in [GitHub Actions](https://github.com/achchu/api-performance-project/actions).
 
 ---
 
 ## 5. Why This Approach?
 
-### Environment Variables for Security
+### Local API Server
 
-API keys are loaded via `.env` and **never committed to GitHub** to prevent exposure.
+Instead of relying on external APIs (which have rate limits and require API keys), this project uses a local Express server that provides market data from fixtures. This allows for:
 
-### Mocked API Calls in Jest
+- **Unlimited testing** without rate limit concerns
+- **Deterministic test data** from fixtures
+- **Full control** over API behavior and responses
+- **Offline development** capability
 
-Instead of calling external APIs in Jest tests, mocked responses to ensure deterministic and reliable tests.
+### Performance Testing with k6
 
-### Limited Requests in k6
-
-To avoid exceeding API rate limits, the k6 test runs with:
-
-```ts
-export const options = {
-  vus: 1, // Single virtual user
-  iterations: 5, // Five API calls
-};
-```
-
-This ensures controlled API usage while still demonstrating load-testing capabilities with k6.
+k6 tests run against the local API server
 
 ---
 
