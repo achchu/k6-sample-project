@@ -1,4 +1,4 @@
-#API Performance Testing Project (k6) 🚀
+## API Performance Testing Project (k6) 🚀
 
 ![GitHub Workflow Status](https://github.com/achchu/k6-sample-project/actions/workflows/test.yml/badge.svg)
 
