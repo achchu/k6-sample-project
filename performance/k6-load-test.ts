@@ -7,6 +7,11 @@ export const options = {
     { duration: "1m", target: 100 }, // Peak load
     { duration: "30s", target: 0 }, //Gradually ramp down the users
   ],
+  ext: {
+    loadimpact: {
+      name: "Market API Load Test",
+    },
+  },
 };
 
 export default function () {

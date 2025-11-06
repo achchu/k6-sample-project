@@ -1,10 +1,14 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
-import { Options } from "k6/options";
 
-export const options: Options = {
+export const options = {
   vus: 1,
   iterations: 5,
+  ext: {
+    loadimpact: {
+      name: "Market API Performance Test",
+    },
+  },
 };
 
 export default function () {

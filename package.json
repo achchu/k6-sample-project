@@ -6,7 +6,15 @@
     "dev:api": "ts-node --transpile-only src/api/server.ts",
     "test": "npm run test:unit && npm run test:integration",
     "test:unit": "jest test/unit",
-    "test:integration": "jest test/integration"
+    "test:integration": "jest test/integration",
+    "test:perf:simple": "k6 run performance/k6-test.ts",
+    "test:perf:load:simple": "k6 run performance/k6-load-test.ts",
+    "test:perf": "k6 run --out influxdb=http://myorg:some-auth-token@localhost:8086/k6db performance/k6-test.ts",
+    "test:perf:load": "k6 run --out influxdb=http://myorg:some-auth-token@localhost:8086/k6db performance/k6-load-test.ts",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:restart": "docker-compose restart"
   },
   "keywords": [],
   "author": "",

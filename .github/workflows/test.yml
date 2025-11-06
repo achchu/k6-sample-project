@@ -13,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -21,21 +22,11 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Install Typescript & k6 types
-        run: npm install --save-dev typescript @types/k6
-
-      - name: Compile Typescript (k6 Test)
-        run: npx tsc performance/k6-test.ts --outDir dist
-
       - name: Run Unit tests
         run: npm run test:unit
 
-      - name: Run Integration tests (Only on PRs to avoid rate limiting)
-        if: github.event_name == 'pull_request'
+      - name: Run Integration tests
         run: npm run test:integration
-        env:
-          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
-          ALPHA_VANTAGE_API_URL: ${{ secrets.ALPHA_VANTAGE_API_URL }}
 
       - name: Install k6
         run: |
@@ -47,8 +38,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
-      - name: Run k6 tests
-        run: k6 run dist/k6-test.js
+      - name: Start API server
+        run: npm run dev:api &
         env:
-          ALPHA_VANTAGE_API_KEY: ${{ secrets.ALPHA_VANTAGE_API_KEY }}
-          ALPHA_VANTAGE_API_URL: ${{ secrets.ALPHA_VANTAGE_API_URL }}
+          MARKET_API_PORT: 4000
+
+      - name: Wait for API server
+        run: |
+          timeout 30 bash -c 'until curl -f http://localhost:4000/api/v1/health; do sleep 1; done'
+
+      - name: Run k6 performance tests
+        run: |
+          for test in performance/*.ts; do
+            echo "Running $test..."
+            k6 run "$test" || exit 1
+          done
+        env:
+          MARKET_API_BASE_URL: http://localhost:4000/api/v1
+          SYMBOL: AAPL

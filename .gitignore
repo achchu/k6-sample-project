@@ -20,3 +20,6 @@ dist/
 
 # Test coverage reports
 coverage/
+
+# Docker volumes
+docker-volumes/
